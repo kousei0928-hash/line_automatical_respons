@@ -7,7 +7,7 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({
-  model: "gemini-2.0-flash",
+  model: "gemini-2.5-flash",
   systemInstruction:
     "あなたは丁寧で親しみやすい日本語のカスタマーサポートです。回答は300文字以内で簡潔にまとめてください。",
 });
@@ -56,6 +56,20 @@ async function generateReply(userText) {
   return result.response.text().trim() || "うまく回答が作れませんでした。";
 }
 
+async function startLoadingAnimation(userId, seconds = 20) {
+  const res = await fetch("https://api.line.me/v2/bot/chat/loading/start", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${LINE_CHANNEL_ACCESS_TOKEN}`,
+    },
+    body: JSON.stringify({ chatId: userId, loadingSeconds: seconds }),
+  });
+  if (!res.ok) {
+    console.error("loading animation failed", res.status, await res.text());
+  }
+}
+
 async function replyToLine(replyToken, text) {
   const res = await fetch("https://api.line.me/v2/bot/message/reply", {
     method: "POST",
@@ -94,6 +108,10 @@ export default async function handler(req, res) {
       console.log(`[DEBUG] event[${i}] type:`, event.type, "msg type:", event.message?.type);
       if (event.type !== "message" || event.message?.type !== "text") return;
       try {
+        const userId = event.source?.userId;
+        if (userId) {
+          await startLoadingAnimation(userId, 20);
+        }
         console.log(`[DEBUG] calling Gemini for:`, event.message.text);
         const reply = await generateReply(event.message.text);
         console.log(`[DEBUG] Gemini reply (length ${reply.length}):`, reply.slice(0, 60));
