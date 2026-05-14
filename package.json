@@ -1,0 +1,12 @@
+{
+  "name": "line-gemini-bot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0"
+  }
+}
