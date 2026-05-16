@@ -38,12 +38,6 @@ function verifySignature(rawBody, signature) {
     .createHmac("sha256", LINE_CHANNEL_SECRET)
     .update(rawBody)
     .digest("base64");
-  console.log("[DEBUG] secret length:", LINE_CHANNEL_SECRET?.length);
-  console.log("[DEBUG] secret head:", LINE_CHANNEL_SECRET?.slice(0, 4));
-  console.log("[DEBUG] body length:", rawBody.length);
-  console.log("[DEBUG] expected sig:", expected);
-  console.log("[DEBUG] received sig:", signature);
-  console.log("[DEBUG] match:", expected === signature);
   try {
     return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature ?? ""));
   } catch {
@@ -101,22 +95,16 @@ export default async function handler(req, res) {
   const body = JSON.parse(rawBody.toString("utf8"));
   const events = body.events ?? [];
 
-  console.log("[DEBUG] events count:", events.length);
-
   await Promise.all(
-    events.map(async (event, i) => {
-      console.log(`[DEBUG] event[${i}] type:`, event.type, "msg type:", event.message?.type);
+    events.map(async (event) => {
       if (event.type !== "message" || event.message?.type !== "text") return;
       try {
         const userId = event.source?.userId;
         if (userId) {
           await startLoadingAnimation(userId, 20);
         }
-        console.log(`[DEBUG] calling Gemini for:`, event.message.text);
         const reply = await generateReply(event.message.text);
-        console.log(`[DEBUG] Gemini reply (length ${reply.length}):`, reply.slice(0, 60));
         await replyToLine(event.replyToken, reply);
-        console.log(`[DEBUG] reply sent to LINE`);
       } catch (err) {
         console.error("handler error", err);
         await replyToLine(event.replyToken, "申し訳ありません、応答の生成に失敗しました。");
